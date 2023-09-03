@@ -80,7 +80,9 @@ class Profile(BaseModel):
     community = models.ForeignKey(Community, on_delete=models.CASCADE,blank=True,null=True)   
     marital_status = models.CharField(max_length=30, choices=MARITAL_STATUS_CHOICES,blank=True,null=True)
     physical_status = models.CharField(max_length=30, choices=PHYSICAL_STATUS_CHOICES,blank=True,null=True)
-    is_locked = models.BooleanField(default=False)
+    is_locked_photos = models.BooleanField(default=False)
+    is_locked_social_accounts = models.BooleanField(default=False)
+
 
     def save(self, *args, **kwargs):
         # Update age field based on date_of_birth before saving
@@ -233,3 +235,6 @@ class Interest(BaseModel):
         verbose_name = 'Interest'
         verbose_name_plural = 'Interests'
         ordering = ['-created_at']
+
+
+

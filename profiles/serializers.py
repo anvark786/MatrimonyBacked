@@ -52,6 +52,8 @@ class ProfileSerializer(serializers.ModelSerializer):
     family_details = serializers.SerializerMethodField()
     education = serializers.SerializerMethodField()
     parnter_preference = serializers.SerializerMethodField()
+    photos = serializers.SerializerMethodField()
+
 
     class Meta:
         model = Profile
@@ -106,6 +108,13 @@ class ProfileSerializer(serializers.ModelSerializer):
         if partner_preference:
             serializer =  PreferenceSerializer(partner_preference,many=False,context={"request":request})
             return serializer.data
+        
+    def get_photos(self,obj):
+        photos = Photo.objects.filter(profile=obj)
+        request = self.context.get("request") 
+        if photos:
+            photo_serialaizer = PhotoSerializer(photos,many=True,context={"request":request})
+            return photo_serialaizer.data
 
 class ProfileListSmallSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
@@ -155,8 +164,10 @@ class ProfileListSmallSerializer(serializers.ModelSerializer):
         if photo:
             photo_serialaizer = PhotoSerializer(photo,many=False,context={"request":request})
             return photo_serialaizer.data
+                    
         
 class PhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Photo
         fields = '__all__'
+
