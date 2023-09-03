@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Profile,Address,Occupation,FamilyDetails,Education,Religion,Community,Preference
+from .models import Profile,Address,Occupation,FamilyDetails,Education,Religion,Community,Preference,Photo
 from users.serializers import UserSerializer
 
 
@@ -51,6 +51,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     occupation = serializers.SerializerMethodField()
     family_details = serializers.SerializerMethodField()
     education = serializers.SerializerMethodField()
+    parnter_preference = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -99,6 +100,12 @@ class ProfileSerializer(serializers.ModelSerializer):
             }
             return religous_data
         
+    def get_parnter_preference(self,obj):
+        request = self.context.get("request") 
+        partner_preference = Preference.objects.filter(profile=obj).first()
+        if partner_preference:
+            serializer =  PreferenceSerializer(partner_preference,many=False,context={"request":request})
+            return serializer.data
 
 class ProfileListSmallSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
@@ -106,7 +113,7 @@ class ProfileListSmallSerializer(serializers.ModelSerializer):
     education = serializers.SerializerMethodField()
     religion = serializers.SerializerMethodField()
     location = serializers.SerializerMethodField()
-
+    profile_pic = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -118,21 +125,38 @@ class ProfileListSmallSerializer(serializers.ModelSerializer):
         return name
     
     def get_profession(self,obj):
-        profession = Occupation.objects.filter(profile=obj).first().profession
-        return profession
+        occupation = Occupation.objects.filter(profile=obj).first()
+        if occupation:
+            occupation = occupation.profession
+        return occupation
 
     def get_education(self,obj):
-        education = Education.objects.filter(profile=obj).first().name
+        education = Education.objects.filter(profile=obj).first()
+        if education:
+            education = education.name
         return education
 
     def get_religion(self,obj):
-        religion = Religion.objects.filter(profile=obj).first().name
+        religion =None
+        if obj.community:
+            religion = obj.community.religion.name       
         return religion
     
     def get_location(self,obj):
+        location = None
         address = Address.objects.filter(profile=obj).first()
-        location = str(address.street)+","+str(address.location)+","+str(address.district)
+        if address:
+            location = address.city
         return location
          
-
-       
+    def get_profile_pic(self,obj):
+        photo = Photo.objects.filter(profile=obj).first()
+        request = self.context.get("request")
+        if photo:
+            photo_serialaizer = PhotoSerializer(photo,many=False,context={"request":request})
+            return photo_serialaizer.data
+        
+class PhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Photo
+        fields = '__all__'

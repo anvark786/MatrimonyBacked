@@ -1,7 +1,7 @@
 
 from rest_framework import viewsets
-from .models import Profile,Preference,Religion,Community,Education,Occupation,FamilyDetails,Address
-from .serializers import ProfileSerializer,ReligionSerializer,CommunitySerializer,EducationSerializer,OccupationSerializer,FamilyDetailsSerializer,AddressSerializer,PreferenceSerializer
+from .models import Profile,Preference,Religion,Community,Education,Occupation,FamilyDetails,Address,Photo
+from .serializers import ProfileSerializer,ReligionSerializer,CommunitySerializer,EducationSerializer,OccupationSerializer,FamilyDetailsSerializer,AddressSerializer,PreferenceSerializer,PhotoSerializer,ProfileListSmallSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -22,7 +22,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
         profile = self.get_object()
         profiles = get_matching_profiles(profile.pk)
         if profiles:          
-            serializer = ProfileSerializer(profiles,many=True,context={"request":request})
+            serializer = ProfileListSmallSerializer(profiles,many=True,context={"request":request})
             return Response(serializer.data)
         return Response(profiles)    
 
@@ -35,8 +35,16 @@ class ProfileViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         else:
             return Response({'error': 'UUID parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
-    
-
+        
+    @action(detail=True, methods=['GET'])
+    def profile_photos(self, request,pk=None):
+        profile = self.get_object()
+        photos = []
+        photos = Photo.objects.filter(profile=profile.pk)
+        if photos:
+            serializer = PhotoSerializer(photos,many=True,context={"request":request})
+            return Response(serializer.data)
+        return Response({'message': 'Profile Photos not found'}, status=status.HTTP_400_BAD_REQUEST)
 
 class ReligionViewSet(viewsets.ModelViewSet):
     queryset = Religion.objects.all()
@@ -72,3 +80,8 @@ class PreferenceViewSet(viewsets.ModelViewSet):
     queryset = Preference.objects.all()
     serializer_class = PreferenceSerializer  
     permission_classes = [IsAuthenticated]
+
+class PhotoiewSet(viewsets.ModelViewSet):
+    queryset = Photo.objects.all()
+    serializer_class = PhotoSerializer  
+    # permission_classes = [IsAuthenticated]

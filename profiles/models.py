@@ -34,11 +34,38 @@ class Community(BaseModel):
         return self.name
 
 class Profile(BaseModel):
+   
     COMPLEXION_CHOICES = (
         ('very_fair', 'Very Fair'),
         ('fair', 'Fair'),
         ('wheatish', 'Wheatish'),
         ('dark', 'Dark'),
+    )  
+    BLOOD_GROUP_CHOICES = (
+        ('A+', 'A+'),
+        ('A-', 'A-'),
+        ('B+', 'B+'),
+        ('B-', 'B-'),
+        ('O+', 'O+'),
+        ('O-', 'O-'),
+        ('AB+', 'AB+'),
+        ('AB-', 'AB-')
+    )
+    MARITAL_STATUS_CHOICES = (
+        ('Single', 'Single'),
+        ('Married', 'Married'),
+        ('Divorced', 'Divorced'),
+        ('Widowed', 'Widowed'),
+    )  
+    PHYSICAL_STATUS_CHOICES = (
+        ('normal_person', 'Normal Person'),
+        ('deaf_or_dumb', 'Deaf/Dumb'),
+        ('blind', 'Blind'),
+        ('physically_challenged', 'Physically Challenged'),
+        ('mentally_challenged', 'Mentally Challenged'),
+        ('other_disablity', 'Other Disablity'),
+
+
     )    
     
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -46,11 +73,14 @@ class Profile(BaseModel):
     bio = models.TextField(blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     age = models.CharField(max_length=15, blank=True,null=True)
-    height = models.CharField(max_length=50)
+    height = models.DecimalField(max_digits=5, decimal_places=2)
     weight = models.DecimalField(max_digits=5, decimal_places=2)
-    complexion = models.CharField(max_length=50, choices=COMPLEXION_CHOICES,blank=True,null=True)
-    blood_group = models.CharField(max_length=15)
+    complexion = models.CharField(max_length=30, choices=COMPLEXION_CHOICES,blank=True,null=True)
+    blood_group = models.CharField(max_length=30, choices=BLOOD_GROUP_CHOICES,blank=True,null=True)
     community = models.ForeignKey(Community, on_delete=models.CASCADE,blank=True,null=True)   
+    marital_status = models.CharField(max_length=30, choices=MARITAL_STATUS_CHOICES,blank=True,null=True)
+    physical_status = models.CharField(max_length=30, choices=PHYSICAL_STATUS_CHOICES,blank=True,null=True)
+    is_locked = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         # Update age field based on date_of_birth before saving
