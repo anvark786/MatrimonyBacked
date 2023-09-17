@@ -1,6 +1,8 @@
 
 from rest_framework import viewsets
 from .models import Profile,Preference,Religion,Community,Education,Occupation,FamilyDetails,Address,Photo
+from social_meadia.models import SocialMedia
+from social_meadia.serializers import SocialMediaSerializer
 from .serializers import ProfileSerializer,ReligionSerializer,CommunitySerializer,EducationSerializer,OccupationSerializer,FamilyDetailsSerializer,AddressSerializer,PreferenceSerializer,PhotoSerializer,ProfileListSmallSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
@@ -45,6 +47,30 @@ class ProfileViewSet(viewsets.ModelViewSet):
             serializer = PhotoSerializer(photos,many=True,context={"request":request})
             return Response(serializer.data)
         return Response({'message': 'Profile Photos not found'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['GET'])
+    def social_accounts(self, request,pk=None):
+        profile = self.get_object()
+        is_locked_social = profile.is_locked_social_accounts
+        social_accounts = SocialMedia.objects.filter(owner=profile.user)
+        if social_accounts:
+            serializer = SocialMediaSerializer(social_accounts,many=True,context={"request":request})
+            return Response({"is_locked_social":is_locked_social,"data":serializer.data})
+        return Response({'message': 'Social Accounts not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+   
+
+    @action(detail=True, methods=['PATCH'])
+    def lock_or_unlock_social(self, request, pk=None):
+        profile = self.get_object()
+        profile.is_locked_social_accounts = not profile.is_locked_social_accounts
+        profile.save()
+        if profile.is_locked_social_accounts:
+            message = 'Social Accounts Disabled successfully'
+        else:
+            message = 'Social Accounts Enabled successfully'
+        return Response({'message': message}, status=status.HTTP_200_OK)
+
 
 class ReligionViewSet(viewsets.ModelViewSet):
     queryset = Religion.objects.all()

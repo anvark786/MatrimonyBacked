@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import Profile,Address,Occupation,FamilyDetails,Education,Religion,Community,Preference,Photo
 from users.serializers import UserSerializer
-
+from social_meadia.models import SocialMedia
+from social_meadia.serializers import SocialMediaSerializer 
 
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
@@ -51,9 +52,9 @@ class ProfileSerializer(serializers.ModelSerializer):
     occupation = serializers.SerializerMethodField()
     family_details = serializers.SerializerMethodField()
     education = serializers.SerializerMethodField()
-    parnter_preference = serializers.SerializerMethodField()
+    partner_preference = serializers.SerializerMethodField()
     photos = serializers.SerializerMethodField()
-
+    social_links = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -102,7 +103,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             }
             return religous_data
         
-    def get_parnter_preference(self,obj):
+    def get_partner_preference(self,obj):
         request = self.context.get("request") 
         partner_preference = Preference.objects.filter(profile=obj).first()
         if partner_preference:
@@ -115,7 +116,14 @@ class ProfileSerializer(serializers.ModelSerializer):
         if photos:
             photo_serialaizer = PhotoSerializer(photos,many=True,context={"request":request})
             return photo_serialaizer.data
-
+        
+    def get_social_links(self,obj):
+        social_links =  SocialMedia.objects.filter(owner=obj.user)
+        request = self.context.get("request") 
+        if social_links:
+            social_links_serialaizer = SocialMediaSerializer(social_links,many=True,context={"request":request})
+            return social_links_serialaizer.data
+        
 class ProfileListSmallSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     profession = serializers.SerializerMethodField()
@@ -164,7 +172,8 @@ class ProfileListSmallSerializer(serializers.ModelSerializer):
         if photo:
             photo_serialaizer = PhotoSerializer(photo,many=False,context={"request":request})
             return photo_serialaizer.data
-                    
+
+    
         
 class PhotoSerializer(serializers.ModelSerializer):
     class Meta:
