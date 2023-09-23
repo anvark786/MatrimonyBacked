@@ -1,8 +1,8 @@
 
 from rest_framework import viewsets
 from .models import Profile,Preference,Religion,Community,Education,Occupation,FamilyDetails,Address,Photo
-from social_meadia.models import SocialMedia
-from social_meadia.serializers import SocialMediaSerializer
+from social_meadia.models import SocialMedia,SocialLinkAccessRequest
+from social_meadia.serializers import SocialMediaSerializer,SocialLinkAccessRequestSerializer
 from .serializers import ProfileSerializer,ReligionSerializer,CommunitySerializer,EducationSerializer,OccupationSerializer,FamilyDetailsSerializer,AddressSerializer,PreferenceSerializer,PhotoSerializer,ProfileListSmallSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
@@ -56,9 +56,16 @@ class ProfileViewSet(viewsets.ModelViewSet):
         if social_accounts:
             serializer = SocialMediaSerializer(social_accounts,many=True,context={"request":request})
             return Response({"is_locked_social":is_locked_social,"data":serializer.data})
-        return Response({'message': 'Social Accounts not found'}, status=status.HTTP_400_BAD_REQUEST)
-
-   
+        return Response({'message': 'Social Accounts not found'}, status=status.HTTP_400_BAD_REQUEST)    
+    
+    @action(detail=True, methods=['GET'])
+    def social_requests(self, request,pk=None):
+        profile = self.get_object()
+        request = SocialLinkAccessRequest.objects.filter(profile_owner=profile)
+        if request:
+            serializer = SocialLinkAccessRequestSerializer(request,many=True,context={"request":request})
+            return Response(serializer.data)        
+        return Response([])   
 
     @action(detail=True, methods=['PATCH'])
     def lock_or_unlock_social(self, request, pk=None):
@@ -70,6 +77,15 @@ class ProfileViewSet(viewsets.ModelViewSet):
         else:
             message = 'Social Accounts Enabled successfully'
         return Response({'message': message}, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['GET'])
+    def check_social_request(self, request,pk=None):
+        profile = self.get_object()
+        request = SocialLinkAccessRequest.objects.filter(requester=profile).first()
+        if request:
+            serializer = SocialLinkAccessRequestSerializer(request,many=False,context={"request":request})
+            return Response(serializer.data)        
+        return Response({})
 
 
 class ReligionViewSet(viewsets.ModelViewSet):
@@ -110,4 +126,4 @@ class PreferenceViewSet(viewsets.ModelViewSet):
 class PhotoiewSet(viewsets.ModelViewSet):
     queryset = Photo.objects.all()
     serializer_class = PhotoSerializer  
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]

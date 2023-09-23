@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Profile,Address,Occupation,FamilyDetails,Education,Religion,Community,Preference,Photo
 from users.serializers import UserSerializer
-from social_meadia.models import SocialMedia
+from social_meadia.models import SocialMedia,SocialLinkAccessRequest
 from social_meadia.serializers import SocialMediaSerializer 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -120,6 +120,10 @@ class ProfileSerializer(serializers.ModelSerializer):
     def get_social_links(self,obj):
         social_links =  SocialMedia.objects.filter(owner=obj.user)
         request = self.context.get("request") 
+        if not request.user.is_authenticated:
+            return []
+        if obj.is_locked_social_accounts and not(SocialLinkAccessRequest.objects.filter(requester__user=request.user,status="approved").exists()):
+            return []
         if social_links:
             social_links_serialaizer = SocialMediaSerializer(social_links,many=True,context={"request":request})
             return social_links_serialaizer.data

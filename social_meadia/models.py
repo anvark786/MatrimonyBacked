@@ -22,8 +22,8 @@ class SocialMedia(BaseModel):
         return self.name
     
     class Meta:
-        verbose_name = 'Social_meadia'
-        verbose_name_plural = 'Social_meadias'
+        verbose_name = 'Social meadia'
+        verbose_name_plural = 'Social meadias'
         ordering = ['-created_at']
 
 class SocialLinkAccessRequest(BaseModel):
@@ -31,12 +31,11 @@ class SocialLinkAccessRequest(BaseModel):
     profile_owner = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='profile_social_link_access_requests_received')
     status = models.CharField(max_length=10, choices=[('pending', 'Pending'), ('approved', 'Approved'), ('declined ', 'Declined ')], default='pending')  
 
-    def __str__(self):
-        f"AccessRequest send {self.requester.user.username} to {self.profile_owner.user.username}"
+    
     
     class Meta:
         unique_together = ('requester', 'profile_owner')
-        verbose_name = 'Social_link_access_request'
-        verbose_name_plural = 'Social_link_access_requests'
+        verbose_name = 'Social link_access request'
+        verbose_name_plural = 'Social link access requests'
         ordering = ['-created_at']
 
