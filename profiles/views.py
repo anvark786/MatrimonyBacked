@@ -86,8 +86,18 @@ class ProfileViewSet(viewsets.ModelViewSet):
             serializer = SocialLinkAccessRequestSerializer(request,many=False,context={"request":request})
             return Response(serializer.data)        
         return Response({})
-
-
+    
+    @action(detail=True, methods=['GET'])
+    def recived_social_request(self, request,pk=None):
+        profile = self.get_object()
+        requests = SocialLinkAccessRequest.objects.filter(profile_owner=profile)     
+        paginated_results = self.paginate_queryset(requests) 
+        if paginated_results:
+            serializer = SocialLinkAccessRequestSerializer(paginated_results,many=True,context={"request":request})
+            return self.get_paginated_response(serializer.data)
+        serializer = SocialLinkAccessRequestSerializer(requests,many=True,context={"request":request})
+        return Response(serializer.data)
+    
 class ReligionViewSet(viewsets.ModelViewSet):
     queryset = Religion.objects.all()
     serializer_class = ReligionSerializer    

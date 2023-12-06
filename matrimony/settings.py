@@ -118,6 +118,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         # Other authentication classes if needed
     ],
+    'DEFAULT_PAGINATION_CLASS': 'matrimony.functions.StandardResultsSetPagination',
 }
 
 

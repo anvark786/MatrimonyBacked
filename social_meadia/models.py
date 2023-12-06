@@ -29,7 +29,7 @@ class SocialMedia(BaseModel):
 class SocialLinkAccessRequest(BaseModel):
     requester = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='profile_social_link_access_requests_made')
     profile_owner = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='profile_social_link_access_requests_received')
-    status = models.CharField(max_length=10, choices=[('pending', 'Pending'), ('approved', 'Approved'), ('declined ', 'Declined ')], default='pending')  
+    status = models.CharField(max_length=10, choices=[('pending', 'Pending'), ('approved', 'Approved'), ('declined', 'Declined')], default='pending')  
 
     
     

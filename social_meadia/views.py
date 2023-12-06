@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from datetime import datetime
 
 
 
@@ -32,6 +33,7 @@ class SocialLinkAccessRequestViewSet(viewsets.ModelViewSet):
             }
             return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE) 
         access_request.status = "approved"
+        access_request.updated_at = datetime.now()
         access_request.save()
         response_data = {
             'StatusCode':6000,
@@ -50,6 +52,7 @@ class SocialLinkAccessRequestViewSet(viewsets.ModelViewSet):
             }
             return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE) 
         access_request.status = "declined"
+        access_request.updated_at = datetime.now()
         access_request.save()
         response_data = {
             'StatusCode':6000,
