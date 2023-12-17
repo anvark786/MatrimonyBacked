@@ -24,7 +24,8 @@ class SocialLinkAccessRequestViewSet(viewsets.ModelViewSet):
 
 
     @action(detail=True, methods=['PATCH'])
-    def accept_access_request(self, request, pk=None):
+    def handle_social_request(self, request, pk=None):
+        action_type = request.data.get('action',None)
         access_request = self.get_object()
         if access_request.status !="pending":
             response_data = {
@@ -32,30 +33,23 @@ class SocialLinkAccessRequestViewSet(viewsets.ModelViewSet):
             'message':"Already Made an Action!."
             }
             return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE) 
-        access_request.status = "approved"
-        access_request.updated_at = datetime.now()
-        access_request.save()
-        response_data = {
-            'StatusCode':6000,
-            'message':"Successfully Approved."
-            }
-        return Response(response_data, status=status.HTTP_200_OK)
-
-
-    @action(detail=True, methods=['PATCH'])
-    def decline_access_request(self, request, pk=None):
-        access_request = self.get_object()
-        if access_request.status !="pending":
+        if action_type == "accept":
+            access_request.status = "approved"
+            access_request.updated_at = datetime.now()
+            access_request.save()
             response_data = {
-            'StatusCode':6001,
-            'message':"Already Made an Action!."
-            }
-            return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE) 
-        access_request.status = "declined"
-        access_request.updated_at = datetime.now()
-        access_request.save()
-        response_data = {
-            'StatusCode':6000,
-            'message':"Successfully Declined!."
-            }
-        return Response(response_data, status=status.HTTP_200_OK)
+                'StatusCode':6000,
+                'message':"Successfully Approved."
+                }
+            return Response(response_data, status=status.HTTP_200_OK)
+        elif action_type == "reject":
+            access_request.status = "declined"
+            access_request.updated_at = datetime.now()
+            access_request.save()
+            response_data = {
+                'StatusCode':6000,
+                'message':"Successfully Declined!."
+                }
+            return Response(response_data, status=status.HTTP_200_OK)
+        return Response(response_data = {'StatusCode':6001,'message':"Somthing wrong!."}, status=status.HTTP_406_NOT_ACCEPTABLE)
+

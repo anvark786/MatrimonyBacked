@@ -12,6 +12,10 @@ class SocialLinkAccessRequestSerializer(serializers.ModelSerializer):
     profile_requester_name = serializers.SerializerMethodField() 
     status_display = serializers.CharField(source='get_status_display',read_only=True)
     profile_requester_uuid = serializers.SerializerMethodField() 
+    profile_owner_name = serializers.SerializerMethodField() 
+    profile_owner_uuid = serializers.SerializerMethodField() 
+
+
 
     class Meta:
         model = SocialLinkAccessRequest
@@ -23,4 +27,12 @@ class SocialLinkAccessRequestSerializer(serializers.ModelSerializer):
     
     def get_profile_requester_uuid(self,obj):
         uuid = obj.requester.uuid
+        return uuid
+    
+    def get_profile_owner_name(self,obj):
+        name = str(obj.profile_owner.user.first_name)+" "+str(obj.profile_owner.user.last_name)+"("+str(obj.profile_owner.profile_id)+")"
+        return name
+    
+    def get_profile_owner_uuid(self,obj):
+        uuid = obj.profile_owner.uuid
         return uuid

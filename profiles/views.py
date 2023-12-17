@@ -78,10 +78,12 @@ class ProfileViewSet(viewsets.ModelViewSet):
             message = 'Social Accounts Enabled successfully'
         return Response({'message': message}, status=status.HTTP_200_OK)
     
-    @action(detail=True, methods=['GET'])
-    def check_social_request(self, request,pk=None):
-        profile = self.get_object()
-        request = SocialLinkAccessRequest.objects.filter(requester=profile).first()
+    @action(detail=False, methods=['GET'])
+    def check_social_request(self, request):
+        uuid = request.query_params.get('uuid',None)
+        print(request.user.profile,"request.user.profile")
+        if uuid:
+            request = SocialLinkAccessRequest.objects.filter(profile_owner__uuid=uuid,requester=request.user.profile).first()
         if request:
             serializer = SocialLinkAccessRequestSerializer(request,many=False,context={"request":request})
             return Response(serializer.data)        
@@ -91,6 +93,17 @@ class ProfileViewSet(viewsets.ModelViewSet):
     def recived_social_request(self, request,pk=None):
         profile = self.get_object()
         requests = SocialLinkAccessRequest.objects.filter(profile_owner=profile)     
+        paginated_results = self.paginate_queryset(requests) 
+        if paginated_results:
+            serializer = SocialLinkAccessRequestSerializer(paginated_results,many=True,context={"request":request})
+            return self.get_paginated_response(serializer.data)
+        serializer = SocialLinkAccessRequestSerializer(requests,many=True,context={"request":request})
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['GET'])
+    def list_of_requests_send_by_profile(self, request,pk=None):
+        profile = self.get_object()
+        requests = SocialLinkAccessRequest.objects.filter(requester=profile)     
         paginated_results = self.paginate_queryset(requests) 
         if paginated_results:
             serializer = SocialLinkAccessRequestSerializer(paginated_results,many=True,context={"request":request})
