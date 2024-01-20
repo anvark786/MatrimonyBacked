@@ -45,9 +45,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'django_filters',
     'users',
     'profiles',
     'social_meadia',
+    
 ]
 
 MIDDLEWARE = [
@@ -119,6 +121,7 @@ REST_FRAMEWORK = {
         # Other authentication classes if needed
     ],
     'DEFAULT_PAGINATION_CLASS': 'matrimony.functions.StandardResultsSetPagination',
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
 }
 
 

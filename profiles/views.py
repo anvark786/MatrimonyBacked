@@ -10,13 +10,31 @@ from rest_framework.response import Response
 from .functions import get_matching_profiles
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-
-
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class ProfileViewSet(viewsets.ModelViewSet):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer    
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = {
+        'age': ['lte', 'gte'],
+        'height': ['lte', 'gte'],
+        'weight': ['lte', 'gte'],
+        'complexion': ['exact'],
+        'blood_group': ['exact'],
+        'community__name': ['exact'],
+        'marital_status': ['exact'],
+        'physical_status': ['exact'],
+        'is_locked_photos': ['exact'],
+        'is_locked_social_accounts': ['exact'],
+        'educations__name': ['exact'],
+        'occupation__profession_type': ['exact'],
+        'address__district': ['exact'],
+        'address__city': ['exact'],
+        'address__location': ['exact'],
+        'family__financial_status': ['exact'],
+    }
     # permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=['GET'])
@@ -27,6 +45,23 @@ class ProfileViewSet(viewsets.ModelViewSet):
             serializer = ProfileListSmallSerializer(profiles,many=True,context={"request":request})
             return Response(serializer.data)
         return Response(profiles)    
+
+    
+    @action(detail=False, methods=['GET'],url_path='search-by-id')
+    def search_by_profile_id(self, request, pk=None):
+        profile_id = request.query_params.get('profile_id',None)
+        gender_selection = 'M'
+        if request.user.gender == 'M':
+            gender_selection = 'F'       
+        if profile_id:
+            profile = Profile.objects.filter(profile_id=profile_id,user__gender=gender_selection).first()
+            if profile:
+                serializer = ProfileListSmallSerializer(profile,many=False,context={"request":request})
+                return Response(serializer.data)   
+            else:
+                return Response({})  
+        else:
+            return Response({'error': 'Profile ID parameter is required'}, status=status.HTTP_400_BAD_REQUEST)  
 
     @action(detail=False, methods=['GET'])
     def profile_by_uuid(self, request):
