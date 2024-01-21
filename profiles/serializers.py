@@ -138,7 +138,7 @@ class ProfileListSmallSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields ='__all__'
+        exclude =['deleted','deleted_by_cascade','created_by','updated_by']
 
 
     def get_name(self,obj):
@@ -154,7 +154,7 @@ class ProfileListSmallSerializer(serializers.ModelSerializer):
     def get_education(self,obj):
         education = Education.objects.filter(profile=obj).first()
         if education:
-            education = education.name
+            education = education.get_name_display()
         return education
 
     def get_religion(self,obj):

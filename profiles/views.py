@@ -21,9 +21,9 @@ class ProfileViewSet(viewsets.ModelViewSet):
         'age': ['lte', 'gte'],
         'height': ['lte', 'gte'],
         'weight': ['lte', 'gte'],
-        'complexion': ['exact'],
+        'complexion': ['exact', 'in'],
         'blood_group': ['exact'],
-        'community__name': ['exact'],
+        'community__name': ['exact', 'in'],
         'marital_status': ['exact'],
         'physical_status': ['exact'],
         'is_locked_photos': ['exact'],
@@ -33,18 +33,27 @@ class ProfileViewSet(viewsets.ModelViewSet):
         'address__district': ['exact'],
         'address__city': ['exact'],
         'address__location': ['exact'],
-        'family__financial_status': ['exact'],
+        'family__financial_status': ['exact', 'in'],
     }
     # permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.query_params.get('basic', False):
+            return ProfileListSmallSerializer
+        else:           
+            return ProfileSerializer
 
     @action(detail=True, methods=['GET'])
     def matching_profiles(self, request, pk=None):
         profile = self.get_object()
         profiles = get_matching_profiles(profile.pk)
-        if profiles:          
+        paginated_results = self.paginate_queryset(profiles) 
+        if paginated_results:          
+            serializer = ProfileListSmallSerializer(paginated_results,many=True,context={"request":request})
+            return self.get_paginated_response(serializer.data)
+        elif profiles:          
             serializer = ProfileListSmallSerializer(profiles,many=True,context={"request":request})
-            return Response(serializer.data)
-        return Response(profiles)    
+        return Response(serializer.data)  
 
     
     @action(detail=False, methods=['GET'],url_path='search-by-id')
@@ -54,12 +63,12 @@ class ProfileViewSet(viewsets.ModelViewSet):
         if request.user.gender == 'M':
             gender_selection = 'F'       
         if profile_id:
-            profile = Profile.objects.filter(profile_id=profile_id,user__gender=gender_selection).first()
+            profile = Profile.objects.filter(profile_id=profile_id,user__gender=gender_selection)
             if profile:
-                serializer = ProfileListSmallSerializer(profile,many=False,context={"request":request})
+                serializer = ProfileListSmallSerializer(profile,many=True,context={"request":request})
                 return Response(serializer.data)   
             else:
-                return Response({})  
+                return Response([])  
         else:
             return Response({'error': 'Profile ID parameter is required'}, status=status.HTTP_400_BAD_REQUEST)  
 
