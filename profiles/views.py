@@ -29,7 +29,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
         'is_locked_photos': ['exact'],
         'is_locked_social_accounts': ['exact'],
         'educations__name': ['exact'],
-        'occupation__profession_type': ['exact'],
+        'occupation__profession_type': ['exact', 'in'],
         'address__district': ['exact'],
         'address__city': ['exact'],
         'address__location': ['exact'],

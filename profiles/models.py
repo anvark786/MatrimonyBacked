@@ -19,6 +19,27 @@ DISTRICT_CHOICES = (
         ('kasaragod', 'Kasaragod'),
     )
 
+COMMUNITY = (
+
+    ('','Any'),
+    ('A Muslim','A Muslim'),
+    ('Ahle Hadees','Ahle Hadees'),
+    ('Bohra ','Bohra '),
+    ('Deobandi','Deobandi'),
+    ('Hanafi','Hanafi'),
+    ('Ithna Ashari','Ithna Ashari'),
+    ('Jafferi','Jafferi'),
+    ('Maliki','Maliki'),
+    ('Salafi','Salafi'),    
+     ('Shafi','Shafi'),
+    ('Sunni','Sunni'),
+    ('Wahabi','Wahabi'),    
+     ('Jafferi','Jafferi'),
+    ('Maliki','Maliki'),
+    ('Salafi','Salafi'),
+    
+)
+
 
 class Religion(BaseModel):
     name = models.CharField(max_length=100, unique=True)
@@ -142,7 +163,7 @@ class Address(BaseModel):
     profile = models.OneToOneField(Profile, on_delete=models.CASCADE, related_name='address')
     address = models.TextField(blank=True)
     city = models.CharField(max_length=128,blank=True,null=True)
-    district =models.CharField(max_length=128,choices=DISTRICT_CHOICES,blank=True,null=True)
+    district =models.CharField(max_length=128,blank=True,null=True)
     street = models.CharField(max_length=128, blank=True,null=True)     
     location = models.CharField(max_length=128, blank=True,null=True)
     post_code = models.CharField(max_length=50, blank=True,null=True)
@@ -200,7 +221,7 @@ class Preference(BaseModel):
     age_min = models.IntegerField()
     age_max = models.IntegerField()    
     preferred_gender =models.CharField(max_length=1, choices=GENDER_CHOICES,blank=True,null=True)
-    preferred_district =models.CharField(max_length=128,choices=DISTRICT_CHOICES,blank=True,null=True)
+    preferred_district =models.CharField(max_length=128,blank=True,null=True)
     street = models.CharField(max_length=128, blank=True,null=True)     
     location = models.CharField(max_length=128, blank=True,null=True)
     interests = models.TextField(blank=True)
