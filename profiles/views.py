@@ -11,7 +11,8 @@ from .functions import get_matching_profiles
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from django_filters.rest_framework import DjangoFilterBackend
-
+from django.db.models import Q
+from matrimony.utils import send_nms_sms,generate_otp_with_otpms
 
 class ProfileViewSet(viewsets.ModelViewSet):
     queryset = Profile.objects.all()
@@ -42,6 +43,19 @@ class ProfileViewSet(viewsets.ModelViewSet):
             return ProfileListSmallSerializer
         else:           
             return ProfileSerializer
+        
+    def get_queryset(self):
+        queryset = Profile.objects.all() 
+        if not self.request.user.is_admin:
+            user_profile = self.request.user.profile
+            user_gender = user_profile.user.gender
+            
+            if self.action == 'list':
+                queryset = queryset.exclude(user=user_profile.user)                
+            excluded_profiles = Profile.objects.filter(Q(user__gender=user_gender) & ~Q(user=user_profile.user))
+            queryset = queryset.exclude(id__in=excluded_profiles.values_list('id', flat=True))
+
+        return queryset
 
     @action(detail=True, methods=['GET'])
     def matching_profiles(self, request, pk=None):

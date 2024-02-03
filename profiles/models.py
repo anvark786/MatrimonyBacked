@@ -20,24 +20,27 @@ DISTRICT_CHOICES = (
     )
 
 COMMUNITY = (
-
-    ('','Any'),
     ('A Muslim','A Muslim'),
     ('Ahle Hadees','Ahle Hadees'),
     ('Bohra ','Bohra '),
-    ('Deobandi','Deobandi'),
+    ('Hanabali','Hanabali'),
     ('Hanafi','Hanafi'),
-    ('Ithna Ashari','Ithna Ashari'),
-    ('Jafferi','Jafferi'),
+    ('Jamat Islami','Jamat Islami'),  
     ('Maliki','Maliki'),
-    ('Salafi','Salafi'),    
-     ('Shafi','Shafi'),
+    ('Salafi','Salafi'),  
+    ('Salafi(KNM)','Salafi(KNM)'),
+    ('Salafi(Markaz Dawa)','Salafi(Markaz Dawa)'),    
+    ('Salafi(Wisdom)','Salafi(Wisdom)'),  
+    ('Sayyid','Sayyid'),    
+    ('Shia','Shia'),
+    ('Sufism','Sufism'),    
     ('Sunni','Sunni'),
-    ('Wahabi','Wahabi'),    
-     ('Jafferi','Jafferi'),
-    ('Maliki','Maliki'),
-    ('Salafi','Salafi'),
-    
+    ('Sunni(AP)','Sunni(AP)'),
+    ('Sunni(EK)','Sunni(EK)'),
+    ('Thableegh Jamaat','Thableegh Jamaat'),   
+    ('Urdu Muslim','Urdu Muslim'),
+    ('Pathan','Pathan'),
+    ('Other','Other'),    
 )
 
 
@@ -115,7 +118,6 @@ class Profile(BaseModel):
 
         if not self.profile_id:
             last_profile = Profile.objects.order_by('-id').first()
-            print("last_profile",last_profile)
             if last_profile:
                 last_id = int(last_profile.profile_id[3:])
                 new_id = f"SHK{str(last_id + 1).zfill(5)}"
