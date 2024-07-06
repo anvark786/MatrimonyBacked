@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
-from matrimony.utils import send_nms_sms,generate_otp_with_otpms
+from matrimony.utils import send_nms_sms,generate_otp_with_otpms,verify_otp_with_otpms
 
 class ProfileViewSet(viewsets.ModelViewSet):
     queryset = Profile.objects.all()

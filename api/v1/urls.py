@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework import routers
 from profiles.views import ProfileViewSet,ReligionViewSet,CommunityViewSet,EducationViewSet,OccupationViewSet,FamilyDetailsViewSet,AddressViewSet,PreferenceViewSet,PhotoiewSet
-from users.views import UserViewSet,UserRegistrationAPIView,UserLoginAPIView
+from users.views import UserViewSet,UserRegistrationAPIView,UserLoginAPIView,SendMobileOtpAPIView,VerifyMobileOtpAPIView
 from social_meadia.views import SocialMediaViewSet,SocialLinkAccessRequestViewSet
 
 router = routers.DefaultRouter()
@@ -29,4 +29,8 @@ urlpatterns = [
     path('', include(router.urls)),    
     path('register/', UserRegistrationAPIView.as_view(), name='user-registration'),
     path('login/', UserLoginAPIView.as_view(), name='user-login'),
+    path('send-mobile-otp/', SendMobileOtpAPIView.as_view(), name='send-mobile-otp'),
+    path('verify-mobile-otp/', VerifyMobileOtpAPIView.as_view(), name='verify-mobile-otp'),
+
+
 ]
