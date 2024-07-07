@@ -13,6 +13,7 @@ from django.db.models import Q
 from datetime import datetime
 from matrimony.utils import generate_otp_with_otpms,verify_otp_with_otpms,send_nms_sms
 import random
+import re
 
 
 class UserRegistrationAPIView(APIView):
@@ -20,6 +21,8 @@ class UserRegistrationAPIView(APIView):
         serializer = UserSerializer(data=request.data)
         password = request.data.get('password',None)
         confirm_password = request.data.get('confirm_password',None)
+        phone_number = request.data.get('phone_number',None)
+
 
         if password is None or confirm_password is None:
             response_data = {
@@ -34,6 +37,16 @@ class UserRegistrationAPIView(APIView):
             'message':"Password not match"
             }
             return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE) 
+        
+        temp_user = TempUser.objects.filter(phone_number=phone_number,is_verified_phone_number=True)
+
+        if not temp_user:
+            response_data = {
+                'StatusCode':6001,
+                'message':"Mobile Number is not verified"
+            }
+            return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE) 
+
         if serializer.is_valid():
             user = serializer.save()
             user.set_password(password)
@@ -47,6 +60,7 @@ class UserRegistrationAPIView(APIView):
 
                 'user_data':serializer.data
             }
+            temp_user.delete(HARD_DELETE)
             return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -91,14 +105,27 @@ class SendMobileOtpAPIView(APIView):
     def post(self, request, *args, **kwargs):  
         otp_type = "signup_otp"
         mobile_number = request.data.get('phone_number',None)
-
+        pattern = r'^(?:\+91|91)?[6789]\d{9}$'
+        if not re.match(pattern, mobile_number):
+            response_data = {
+                'StatusCode': 6001,
+                'message': "Please enter a valid Indian mobile number"
+            }
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(phone_number=mobile_number).exists():
+            response_data = {
+                'StatusCode':6001,
+                'message':"Mobile number already exists!."
+            }
+            return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE)
+        
         temp_id = random.randint(10000, 99999)
         temp_user = TempUser.objects.filter(phone_number=mobile_number)
-        if temp_user.exists():
-            temp_user.delete(HARD_DELETE)
-
-
-        temp_user = TempUser.objects.create(temp_id=temp_id,phone_number=mobile_number)
+        print("temp_user",temp_user)
+        if not temp_user.exists():
+            temp_user = TempUser.objects.create(temp_id=temp_id,phone_number=mobile_number)
+        else:
+            temp_user = temp_user.first()    
         response_data = generate_otp_with_otpms(otp_type,temp_user.temp_id)
         status_code = response_data.get("statusCode")
         if status_code !=200:
@@ -140,7 +167,8 @@ class VerifyMobileOtpAPIView(APIView):
         status_code = response_data.get("statusCode")
         if status_code !=200:            
             return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE)
-        temp_user.delete(HARD_DELETE)
+        temp_user.is_verified_phone_number = True
+        temp_user.save()       
         return Response(response_data, status=status.HTTP_201_CREATED) 
 
 

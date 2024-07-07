@@ -27,10 +27,11 @@ class User(AbstractUser):
 class TempUser(BaseModel):
     temp_id = models.IntegerField(blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True)
+    is_verified_phone_number = models.BooleanField(default=False)
 
 
     def __str__(self):
-        return self.temp_id
+        return self.phone_number
     
     class Meta:
         verbose_name = 'Temp User'

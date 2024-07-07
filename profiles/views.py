@@ -36,7 +36,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
         'address__location': ['exact'],
         'family__financial_status': ['exact', 'in'],
     }
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
         if self.request.query_params.get('basic', False):
