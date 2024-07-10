@@ -2,7 +2,7 @@
 from rest_framework import viewsets
 from safedelete import HARD_DELETE
 from .models import User,TempUser
-from profiles.models import Profile
+from profiles.models import Profile,Education,Occupation
 from .serializers import UserSerializer
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -87,14 +87,17 @@ class UserLoginAPIView(APIView):
         refresh = RefreshToken.for_user(user)
         user.last_login = datetime.now()
         user.save()
-        profile_id = Profile.objects.filter(user=user).first()
-        if profile_id:
-            profile_id = profile_id.pk
+        profile = Profile.objects.filter(user=user).first()
+        profile_id = None
+        if profile:
+            profile_id = profile.pk
+        login_redirection = check_signup_process(profile)
         response_data = {
                 'StatusCode':6000,
                 'access_token': str(refresh.access_token),
                 'user_id':user.pk,
                 'profile_id':profile_id,
+                "redirection_page":login_redirection,
                 'message':'Login Successfull..'
         }
         return Response(response_data, status=status.HTTP_201_CREATED)  
@@ -121,7 +124,6 @@ class SendMobileOtpAPIView(APIView):
         
         temp_id = random.randint(10000, 99999)
         temp_user = TempUser.objects.filter(phone_number=mobile_number)
-        print("temp_user",temp_user)
         if not temp_user.exists():
             temp_user = TempUser.objects.create(temp_id=temp_id,phone_number=mobile_number)
         else:
@@ -178,3 +180,25 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
+
+
+
+def check_signup_process(profile):
+    if not profile:
+        return 1
+    elif not Education.objects.filter(profile=profile).exists():
+        return 2
+    elif not  Occupation.objects.filter(profile=profile).exists():        
+        return 3   
+    elif not hasattr(profile,'family'):
+        return 4
+    elif not hasattr(profile,'address'):
+        return 5
+    elif not hasattr(profile,'preference'):
+        return 6
+    else:
+        user = profile.user
+        if not user.has_completed_signup:
+            user.has_completed_signup = True
+            user.save()
+        return 7

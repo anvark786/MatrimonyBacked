@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
-from matrimony.utils import send_nms_sms,generate_otp_with_otpms,verify_otp_with_otpms
+
 
 class ProfileViewSet(viewsets.ModelViewSet):
     queryset = Profile.objects.all()
@@ -67,8 +67,8 @@ class ProfileViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
         elif profiles:          
             serializer = ProfileListSmallSerializer(profiles,many=True,context={"request":request})
-        return Response(serializer.data)  
-
+            return Response(serializer.data)  
+        return Response([{"error":"No Data found"}])
     
     @action(detail=False, methods=['GET'],url_path='search-by-id')
     def search_by_profile_id(self, request, pk=None):
