@@ -57,7 +57,6 @@ class UserRegistrationAPIView(APIView):
                 'message':"Registration Successfull",
                 'refresh_token': str(refresh),
                 'access_token': str(refresh.access_token),
-
                 'user_data':serializer.data
             }
             temp_user.delete(HARD_DELETE)
@@ -98,6 +97,7 @@ class UserLoginAPIView(APIView):
                 'user_id':user.pk,
                 'profile_id':profile_id,
                 "redirection_page":login_redirection,
+                "has_completed_signup":user.has_completed_signup,
                 'message':'Login Successfull..'
         }
         return Response(response_data, status=status.HTTP_201_CREATED)  
@@ -180,6 +180,9 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
+
+
+
 
 
 
