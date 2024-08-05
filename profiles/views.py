@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
+import json
 
 
 class ProfileViewSet(viewsets.ModelViewSet):
@@ -179,10 +180,54 @@ class CommunityViewSet(viewsets.ModelViewSet):
     serializer_class = CommunitySerializer  
     permission_classes = [IsAuthenticated]
 
+
 class EducationViewSet(viewsets.ModelViewSet):
     queryset = Education.objects.all()
     serializer_class = EducationSerializer  
     permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        education_list = request.data.get('educationList', None)
+        profile_id = request.data.get('profile_id', None)
+
+        education_list = json.loads(education_list) if education_list else []
+        created_items = []
+        updated_items = []
+
+        existing_ids = set(Education.objects.filter(profile_id=profile_id).values_list('id', flat=True))
+        request_ids = set()
+
+        for education_data in education_list:
+            education_id = education_data.get('id')
+            if education_id:
+                education_instance = self.get_object_or_none(education_id)
+                if education_instance:
+                    serializer = self.get_serializer(education_instance, data=education_data)
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save()
+                    updated_items.append(serializer.data)
+                else:
+                    return Response({"error": f"Education with ID {education_id} does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+                request_ids.add(education_id)
+            else:                
+                education_data['profile'] = profile_id
+                serializer = self.get_serializer(data=education_data)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                created_items.append(serializer.data)
+                request_ids.add(serializer.data['id'])
+
+        to_delete_ids = existing_ids - request_ids
+        Education.objects.filter(id__in=to_delete_ids).delete()
+
+        return Response(created_items+updated_items, status=status.HTTP_200_OK)
+
+    def get_object_or_none(self, education_id):
+        try:
+            return Education.objects.get(id=education_id)
+        except Education.DoesNotExist:
+            return None
+
 
 class OccupationViewSet(viewsets.ModelViewSet):
     queryset = Occupation.objects.all()

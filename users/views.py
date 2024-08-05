@@ -96,6 +96,7 @@ class UserLoginAPIView(APIView):
                 'access_token': str(refresh.access_token),
                 'user_id':user.pk,
                 'profile_id':profile_id,
+                'profile_uuid':profile.uuid,
                 "redirection_page":login_redirection,
                 "has_completed_signup":user.has_completed_signup,
                 'message':'Login Successfull..'
