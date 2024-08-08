@@ -99,6 +99,7 @@ class UserLoginAPIView(APIView):
                 'profile_uuid':profile.uuid,
                 "redirection_page":login_redirection,
                 "has_completed_signup":user.has_completed_signup,
+                "is_hidden":profile.is_hidden,
                 'message':'Login Successfull..'
         }
         return Response(response_data, status=status.HTTP_201_CREATED)  

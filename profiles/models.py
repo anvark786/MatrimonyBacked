@@ -106,6 +106,7 @@ class Profile(BaseModel):
     physical_status = models.CharField(max_length=30, choices=PHYSICAL_STATUS_CHOICES,blank=True,null=True)
     is_locked_photos = models.BooleanField(default=False)
     is_locked_social_accounts = models.BooleanField(default=False)
+    is_hidden = models.BooleanField(default=False)
 
 
     def save(self, *args, **kwargs):

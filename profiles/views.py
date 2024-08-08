@@ -53,7 +53,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
             
             if self.action == 'list':
                 queryset = queryset.exclude(user=user_profile.user)                
-            excluded_profiles = Profile.objects.filter(Q(user__gender=user_gender) & ~Q(user=user_profile.user))
+            excluded_profiles = Profile.objects.filter(Q(user__gender=user_gender) & Q(is_hidden=True) & ~Q(user=user_profile.user))
             queryset = queryset.exclude(id__in=excluded_profiles.values_list('id', flat=True))
 
         return queryset
@@ -78,7 +78,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
         if request.user.gender == 'M':
             gender_selection = 'F'       
         if profile_id:
-            profile = Profile.objects.filter(profile_id=profile_id,user__gender=gender_selection)
+            profile = Profile.objects.filter(profile_id=profile_id,user__gender=gender_selection,is_hidden=False)
             if profile:
                 serializer = ProfileListSmallSerializer(profile,many=True,context={"request":request})
                 return Response(serializer.data)   
@@ -91,7 +91,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
     def profile_by_uuid(self, request):
         uuid = request.query_params.get('uuid')
         if uuid:
-            profile = get_object_or_404(Profile, uuid=uuid)
+            profile = get_object_or_404(Profile, uuid=uuid,is_hidden=False)
             serializer = self.get_serializer(profile)
             return Response(serializer.data)
         else:
@@ -136,6 +136,18 @@ class ProfileViewSet(viewsets.ModelViewSet):
         else:
             message = 'Social Accounts Enabled successfully'
         return Response({'message': message}, status=status.HTTP_200_OK)
+
+    
+    @action(detail=True, methods=['PATCH'],url_path='hide-or-unhide-profile')
+    def hide_or_unhide_profile(self, request, pk=None):
+        profile = self.get_object()
+        profile.is_hidden = not profile.is_hidden
+        profile.save()
+        if profile.is_hidden:
+            message = 'Your Profile Successfully Hidden Now!.'
+        else:
+            message = 'Your Profile Successfully Un-Hidden Now!.'
+        return Response({'message': message,'is_hidden':profile.is_hidden}, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['GET'])
     def check_social_request(self, request):
