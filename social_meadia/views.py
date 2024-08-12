@@ -23,6 +23,18 @@ class SocialLinkAccessRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
 
+    def create(self, request, *args, **kwargs):
+        requester = request.data.get('requester',None)
+        profile_owner = request.data.get('profile_owner',None)
+        if requester==profile_owner:
+           return Response({'error': 'Requester and profile owner cannot be the same person.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
     @action(detail=True, methods=['PATCH'])
     def handle_social_request(self, request, pk=None):
         action_type = request.data.get('action',None)

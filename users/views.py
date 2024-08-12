@@ -96,10 +96,10 @@ class UserLoginAPIView(APIView):
                 'access_token': str(refresh.access_token),
                 'user_id':user.pk,
                 'profile_id':profile_id,
-                'profile_uuid':profile.uuid,
+                'profile_uuid':profile.uuid if profile else None,
                 "redirection_page":login_redirection,
                 "has_completed_signup":user.has_completed_signup,
-                "is_hidden":profile.is_hidden,
+                "is_hidden":profile.is_hidden if profile else None,
                 'message':'Login Successfull..'
         }
         return Response(response_data, status=status.HTTP_201_CREATED)  

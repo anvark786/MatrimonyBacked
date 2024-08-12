@@ -73,25 +73,26 @@ class ProfileViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['GET'],url_path='search-by-id')
     def search_by_profile_id(self, request, pk=None):
-        profile_id = request.query_params.get('profile_id',None)
-        gender_selection = 'M'
-        if request.user.gender == 'M':
-            gender_selection = 'F'       
-        if profile_id:
-            profile = Profile.objects.filter(profile_id=profile_id,user__gender=gender_selection,is_hidden=False)
-            if profile:
-                serializer = ProfileListSmallSerializer(profile,many=True,context={"request":request})
-                return Response(serializer.data)   
-            else:
-                return Response([])  
+        profile_id = request.query_params.get('profile_id')
+        if not profile_id:
+            return Response({'error': 'Profile ID parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if request.user.profile.profile_id == profile_id:
+            profile = Profile.objects.filter(profile_id=profile_id)
         else:
-            return Response({'error': 'Profile ID parameter is required'}, status=status.HTTP_400_BAD_REQUEST)  
+            gender_selection = 'F' if request.user.gender == 'M' else 'M'
+            profile = Profile.objects.filter(profile_id=profile_id, user__gender=gender_selection, is_hidden=False)
+
+        serializer = ProfileListSmallSerializer(profile, many=True, context={"request": request})
+        return Response(serializer.data)
 
     @action(detail=False, methods=['GET'])
     def profile_by_uuid(self, request):
         uuid = request.query_params.get('uuid')
         if uuid:
-            profile = get_object_or_404(Profile, uuid=uuid,is_hidden=False)
+            profile = get_object_or_404(Profile, uuid=uuid)
+            if profile.user != request.user and profile.is_hidden:
+                return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
             serializer = self.get_serializer(profile)
             return Response(serializer.data)
         else:

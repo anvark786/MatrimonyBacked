@@ -122,7 +122,12 @@ class ProfileSerializer(serializers.ModelSerializer):
         request = self.context.get("request") 
         if not request.user.is_authenticated:
             return []
-        if obj.is_locked_social_accounts and not(SocialLinkAccessRequest.objects.filter(requester__user=request.user,status="approved").exists()):
+        if obj.is_locked_social_accounts and not(
+            SocialLinkAccessRequest.objects.filter(
+                requester__user=request.user,
+                profile_owner__user=obj.user,
+                status="approved"
+                ).exists()) and request.user != obj.user:
             return []
         if social_links:
             social_links_serialaizer = SocialMediaSerializer(social_links,many=True,context={"request":request})
