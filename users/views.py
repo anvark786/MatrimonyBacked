@@ -3,7 +3,7 @@ from rest_framework import viewsets
 from safedelete import HARD_DELETE
 from .models import User,TempUser
 from profiles.models import Profile,Education,Occupation
-from .serializers import UserSerializer
+from .serializers import UserSerializer,UpdatePasswordSerializer,ForgotPasswordSerializer,SendForgotPasswordOTPSerializer
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
@@ -14,6 +14,7 @@ from datetime import datetime
 from matrimony.utils import generate_otp_with_otpms,verify_otp_with_otpms,send_nms_sms
 import random
 import re
+import uuid
 
 
 class UserRegistrationAPIView(APIView):
@@ -131,19 +132,21 @@ class SendMobileOtpAPIView(APIView):
         else:
             temp_user = temp_user.first()    
         response_data = generate_otp_with_otpms(otp_type,temp_user.temp_id)
-        status_code = response_data.get("statusCode")
-        if status_code !=200:
+        if response_data.get('StatusCode')==6001:
             response_data = {
-                'StatusCode':response_data.get("statusCode"),
-                'message':response_data.get("message")
+                'StatusCode':response_data.get('StatusCode'),
+                'message':"Issue on OTP creation,please tray later."
             }
-            return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE) 
+            return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE)
         mobile_otp = response_data.get("otp")
         message = "Your OTP for Signup is "+ mobile_otp
         nms_response = send_nms_sms(mobile_number,message)
-        nms_response_status = nms_response.get("status")
-        if nms_response_status == "error":
-            return Response(nms_response, status=status.HTTP_406_NOT_ACCEPTABLE)
+        if nms_response.get('StatusCode')==6001:
+            response_data = {
+                'StatusCode':nms_response.get('status_code'),
+                'message':"OTP sending issue,please tray later."
+            }
+            return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE)
         return Response(nms_response, status=status.HTTP_201_CREATED)  
         
 
@@ -174,18 +177,127 @@ class VerifyMobileOtpAPIView(APIView):
         temp_user.is_verified_phone_number = True
         temp_user.save()       
         return Response(response_data, status=status.HTTP_201_CREATED) 
+    
 
 
+class UpdateLoginPasswordAPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = UpdatePasswordSerializer(data=request.data, context={'request': request})
+        
+        if serializer.is_valid():
+            user = request.user
+            new_password = serializer.validated_data['new_password']
+            user.set_password(new_password)
+            user.save()
+            return Response({'message': "Your password was updated successfully. Please log in again!"}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+class SendForgotPasswordOTPAPIView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = SendForgotPasswordOTPSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            mobile_no = serializer.validated_data.get("mobile_number")
+            otp_type = "forgot_password"
+            user_id = User.objects.filter(phone_number=mobile_no).first().pk
+            response_data = generate_otp_with_otpms(otp_type,user_id)
+            if response_data.get('StatusCode')==6001:
+                response_data = {
+                    'StatusCode':response_data.get('StatusCode'),
+                    'message':"Issue on OTP creation,please try later."
+                }
+                return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE)
+            mobile_otp = response_data.get("otp")
+            message = "Your OTP for Reset Password is "+ mobile_otp
+            nms_response = send_nms_sms(mobile_no,message)
+            if nms_response.get('StatusCode')==6001:
+                response_data = {
+                    'StatusCode':nms_response.get('status_code'),
+                    'message':"OTP sending issue,please try later."
+                }
+                return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE)
+            return Response(nms_response, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+class VerifyForgotPasswordOTPAPIView(APIView):
+    def post(self, request, *args, **kwargs):
+        mobile_number = request.data.get('mobile_number',None)
+        mobile_otp = request.data.get('mobile_otp',None)
+
+        user =  User.objects.filter(phone_number=mobile_number).first()
+        if not user:
+            response_data = {
+                'StatusCode':6001,
+                'message':"OTP genaration failed,please try again."
+            }
+            return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE)
+
+        key = "forgot_password_user_"+str(user.pk)
+        response_data = verify_otp_with_otpms(key,mobile_otp)
+        status_code = response_data.get("statusCode")
+        if status_code !=200:            
+            return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE)
+        
+        token = str(uuid.uuid4())
+        temp_id = random.randint(10000, 99999)
+        response_data = generate_otp_with_otpms(token,temp_id)
+
+        if response_data.get('StatusCode')==6001:
+            response_data = {
+                'StatusCode':response_data.get('StatusCode'),
+                'message':"Issue on OTP verification process pls try again."
+            }
+            return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE)
+        response_data["token"] = f"{token}_user_{temp_id}"
+        return Response({
+            "statusCode": 200,
+            "message": "OTP verification completed successfully.",
+            "verified_token_data":{
+                "token":f"{token}_user_{temp_id}",
+                "otp":response_data.get("otp")
+            }
+        }, status=status.HTTP_201_CREATED)      
+   
+    
+class ForgotPasswordAPIView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = ForgotPasswordSerializer(data=request.data, context={'request': request})
+        
+        if serializer.is_valid():
+            mobile_number = request.data.get('mobile_number',None)
+            user = User.objects.filter(phone_number=mobile_number).first()
+            
+            token = serializer.validated_data.get("token")
+            token_otp = serializer.validated_data.get("token_otp")
+            
+            response_data = verify_otp_with_otpms(token,token_otp)
+            print("response_data",response_data)
+            status_code = response_data.get("statusCode")
+            if status_code !=200 or not user:            
+                response_data = {
+                    'StatusCode':6001,
+                    'message':"Somthing got wrong on OTP verification process pls try again."
+                }
+                return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE)
+                            
+            new_password = serializer.validated_data['new_password']
+            user.set_password(new_password)
+            user.save()
+            return Response({'message': "Your password was updated successfully. Please log in again!"}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
 
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
-
-
-
-
 
 
 def check_signup_process(profile):

@@ -262,3 +262,23 @@ class Interest(BaseModel):
 
 
 
+class ProfileInterest(BaseModel):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('declined', 'Declined'),
+    ]
+
+    sender = models.ForeignKey(Profile, related_name='sent_interests', on_delete=models.CASCADE)
+    receiver = models.ForeignKey(Profile, related_name='received_interests', on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending') 
+
+
+    def __str__(self):
+        return f"Interest: {self.user.username} is interested in {self.receiver.user.username}"
+
+    class Meta:
+        verbose_name = 'Profile Interest'
+        verbose_name_plural = 'Profile Interests'
+        unique_together = ('sender', 'receiver')
+        ordering = ['-created_at']

@@ -29,7 +29,13 @@ def interact_with_microservice(base_url, endpoint, method='GET', data=None, addi
         return response.json()
     except requests.RequestException as e:
         error_message = f"Error interacting with microservice: {e}"
-        return None, error_message, getattr(e.response, 'status_code', None)
+        error_response = {
+            "status":"error",
+            "message":error_message,
+            "StatusCode":6001
+
+        }
+        return error_response
 
 
 def generate_otp_with_otpms(otp_type, user_id):

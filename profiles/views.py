@@ -1,9 +1,9 @@
 
 from rest_framework import viewsets
-from .models import Profile,Preference,Religion,Community,Education,Occupation,FamilyDetails,Address,Photo
+from .models import Profile,Preference,Religion,Community,Education,Occupation,FamilyDetails,Address,Photo,ProfileInterest
 from social_meadia.models import SocialMedia,SocialLinkAccessRequest
 from social_meadia.serializers import SocialMediaSerializer,SocialLinkAccessRequestSerializer
-from .serializers import ProfileSerializer,ReligionSerializer,CommunitySerializer,EducationSerializer,OccupationSerializer,FamilyDetailsSerializer,AddressSerializer,PreferenceSerializer,PhotoSerializer,ProfileListSmallSerializer
+from .serializers import ProfileSerializer,ReligionSerializer,CommunitySerializer,EducationSerializer,OccupationSerializer,FamilyDetailsSerializer,AddressSerializer,PreferenceSerializer,PhotoSerializer,ProfileListSmallSerializer,ProfileInterestSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -13,6 +13,7 @@ from rest_framework import status
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 import json
+from datetime import datetime
 
 
 class ProfileViewSet(viewsets.ModelViewSet):
@@ -181,7 +182,48 @@ class ProfileViewSet(viewsets.ModelViewSet):
             serializer = SocialLinkAccessRequestSerializer(paginated_results,many=True,context={"request":request})
             return self.get_paginated_response(serializer.data)
         serializer = SocialLinkAccessRequestSerializer(requests,many=True,context={"request":request})
+        return Response(serializer.data)    
+    
+    @action(detail=True, methods=['GET'], url_path='profile-interests')
+    def profile_interests(self, request, pk=None):
+        profile = self.get_object()
+        interest_type = request.query_params.get('type')
+
+        if interest_type == 'received':
+            interests = ProfileInterest.objects.filter(receiver=profile)
+        elif interest_type == 'sent':
+            interests = ProfileInterest.objects.filter(sender=profile)
+        else:
+            return Response({"error": "Invalid type parameter. Use 'received' or 'sent'."}, status=400)
+        paginated_results = self.paginate_queryset(interests)
+        if paginated_results is not None:
+            serializer = ProfileInterestSerializer(paginated_results, many=True, context={"request": request})
+            return self.get_paginated_response(serializer.data)
+
+        serializer = ProfileInterestSerializer(interests, many=True, context={"request": request})
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['PATCH'], url_path='manage-profile')
+    def delete_or_restore_profile(self, request, pk=None):
+        profile = self.get_object()
+        action_type = request.query_params.get('action')
+
+        print("profile",profile)
+
+        if action_type == 'delete':
+            if profile.deleted_by_cascade:
+                return Response({"error": "Profile is already deleted."}, status=status.HTTP_400_BAD_REQUEST)
+            profile.delete() 
+            return Response({'message': "Profile deleted successfully!"}, status=status.HTTP_200_OK)
+        
+        elif action_type == 'restore':
+            if not profile.is_deleted: 
+                return Response({"error": "Profile is not deleted and cannot be restored."}, status=status.HTTP_400_BAD_REQUEST)
+            profile.restore() 
+            return Response({'message': "Profile restored successfully!"}, status=status.HTTP_200_OK)        
+        else:
+            return Response({"error": "Invalid action parameter. Use 'delete' or 'restore'."}, status=status.HTTP_400_BAD_REQUEST)
+        
     
 class ReligionViewSet(viewsets.ModelViewSet):
     queryset = Religion.objects.all()
@@ -273,7 +315,29 @@ class PreferenceViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-class PhotoiewSet(viewsets.ModelViewSet):
+class PhotoViewSet(viewsets.ModelViewSet):
     queryset = Photo.objects.all()
     serializer_class = PhotoSerializer  
     permission_classes = [IsAuthenticated]
+
+
+class ProfileInterestViewSet(viewsets.ModelViewSet):
+    queryset = ProfileInterest.objects.all()
+    serializer_class = ProfileInterestSerializer  
+    permission_classes = [IsAuthenticated]
+    
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        status_update = request.data.get('status')
+        if status_update not in ['approved', 'declined']:
+            return Response(
+                {"error": "Invalid status. It must be either 'approved' or 'declined'."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        instance.status = status_update
+        instance.updated_at = datetime.now()
+        instance.save()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+

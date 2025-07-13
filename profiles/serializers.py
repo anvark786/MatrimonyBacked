@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Profile,Address,Occupation,FamilyDetails,Education,Religion,Community,Preference,Photo
+from .models import Profile,Address,Occupation,FamilyDetails,Education,Religion,Community,Preference,Photo,ProfileInterest
 from users.serializers import UserSerializer
 from social_meadia.models import SocialMedia,SocialLinkAccessRequest
 from social_meadia.serializers import SocialMediaSerializer 
@@ -188,4 +188,21 @@ class PhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Photo
         fields = '__all__'
+
+
+class ProfileInterestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProfileInterest
+        fields = '__all__'
+
+    def validate(self, data):
+        sender = data.get('sender')
+        receiver = data.get('receiver')
+
+        if sender == receiver:
+            raise serializers.ValidationError("Sender and receiver cannot be the same user.")
+        
+        return data
+    
+
 
