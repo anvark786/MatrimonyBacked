@@ -5,3 +5,4 @@ __pycache
 .env.prod
 .env.prod.db
 .env
+db.sqlite3

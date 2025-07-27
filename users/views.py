@@ -155,6 +155,7 @@ class VerifyMobileOtpAPIView(APIView):
     def post(self, request, *args, **kwargs):  
         mobile_number = request.data.get('phone_number',None)
         mobile_otp = request.data.get('otp',None)
+        
         if not mobile_otp:
             response_data = {
                 'StatusCode':6001,
@@ -162,6 +163,7 @@ class VerifyMobileOtpAPIView(APIView):
             }
             return Response(response_data, status=status.HTTP_406_NOT_ACCEPTABLE) 
         temp_user = TempUser.objects.filter(phone_number=mobile_number).first()
+        
         if not temp_user:
             response_data = {
                 'StatusCode':6001,
