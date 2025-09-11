@@ -19,4 +19,4 @@ COPY . .
 RUN chmod +x docker-entrypoint.sh
 
 # Run entrypoint (migrations + start server)
-ENTRYPOINT ["./docker-entrypoint.sh"]
+ENTRYPOINT ["sh", "./docker-entrypoint.sh"]

@@ -1,9 +1,8 @@
-
 from rest_framework import viewsets
-from .models import Profile,Preference,Religion,Community,Education,Occupation,FamilyDetails,Address,Photo,ProfileInterest
+from .models import Profile,Preference, ProfilePhotoViewRequest,Religion,Community,Education,Occupation,FamilyDetails,Address,Photo,ProfileInterest
 from social_meadia.models import SocialMedia,SocialLinkAccessRequest
 from social_meadia.serializers import SocialMediaSerializer,SocialLinkAccessRequestSerializer
-from .serializers import ProfileSerializer,ReligionSerializer,CommunitySerializer,EducationSerializer,OccupationSerializer,FamilyDetailsSerializer,AddressSerializer,PreferenceSerializer,PhotoSerializer,ProfileListSmallSerializer,ProfileInterestSerializer
+from .serializers import ProfilePhotoViewRequestSerializer, ProfileSerializer,ReligionSerializer,CommunitySerializer,EducationSerializer,OccupationSerializer,FamilyDetailsSerializer,AddressSerializer,PreferenceSerializer,PhotoSerializer,ProfileListSmallSerializer,ProfileInterestSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -14,6 +13,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 import json
 from datetime import datetime
+
 
 
 class ProfileViewSet(viewsets.ModelViewSet):
@@ -47,17 +47,28 @@ class ProfileViewSet(viewsets.ModelViewSet):
             return ProfileSerializer
         
     def get_queryset(self):
-        queryset = Profile.objects.all() 
-        if not self.request.user.is_admin:
-            user_profile = self.request.user.profile
-            user_gender = user_profile.user.gender
-            
-            if self.action == 'list':
-                queryset = queryset.exclude(user=user_profile.user)                
-            excluded_profiles = Profile.objects.filter(Q(user__gender=user_gender) & Q(is_hidden=True) & ~Q(user=user_profile.user))
-            queryset = queryset.exclude(id__in=excluded_profiles.values_list('id', flat=True))
+        queryset = Profile.objects.all()
+        if self.action == 'delete_or_restore_profile':
+            queryset = Profile.all_objects.all()
 
+        # if not self.request.user.is_admin:
+        #     try:
+        #         user_profile = self.request.user.profile
+        #     except Profile.DoesNotExist:
+        #         return Profile.objects.none() 
+
+        #     user_gender = user_profile.user.gender
+
+        #     if self.action == 'list':
+        #         queryset = queryset.exclude(user=user_profile.user)
+
+        #     excluded_profiles = Profile.objects.filter(
+        #         Q(user__gender=user_gender) & Q(is_hidden=True) & ~Q(user=user_profile.user)
+        #     )
+        #     queryset = queryset.exclude(id__in=excluded_profiles.values_list('id', flat=True))
+            
         return queryset
+
 
     @action(detail=True, methods=['GET'])
     def matching_profiles(self, request, pk=None):
@@ -138,6 +149,18 @@ class ProfileViewSet(viewsets.ModelViewSet):
         else:
             message = 'Social Accounts Enabled successfully'
         return Response({'message': message}, status=status.HTTP_200_OK)
+    
+    
+    @action(detail=True, methods=['PATCH'])
+    def lock_or_unlock_photos(self, request, pk=None):
+        profile = self.get_object()
+        profile.is_locked_photos = not profile.is_locked_photos
+        profile.save()
+        if profile.is_locked_photos:
+            message = 'Profile Photos Disabled successfully'
+        else:
+            message = 'Profile Photos Enabled successfully'
+        return Response({'message': message}, status=status.HTTP_200_OK)
 
     
     @action(detail=True, methods=['PATCH'],url_path='hide-or-unhide-profile')
@@ -203,28 +226,48 @@ class ProfileViewSet(viewsets.ModelViewSet):
         serializer = ProfileInterestSerializer(interests, many=True, context={"request": request})
         return Response(serializer.data)
     
+    @action(detail=True, methods=['GET'], url_path='profile-photo-view-requests')
+    def profile_photo_view_requests(self, request, pk=None):
+        profile = self.get_object()
+        request_type = request.query_params.get('type')
+        if request_type == 'received':
+            requests = ProfilePhotoViewRequest.objects.filter(receiver=profile).select_related('sender', 'receiver')
+        elif request_type == 'sent':
+            requests = ProfilePhotoViewRequest.objects.filter(sender=profile).select_related('sender', 'receiver')
+        else:
+            return Response({"error": "Invalid type parameter. Use 'received' or 'sent'."}, status=400)       
+        
+        paginated_results = self.paginate_queryset(requests)
+        if paginated_results is not None:
+            serializer = ProfilePhotoViewRequestSerializer(paginated_results, many=True, context={"request": request})
+            return self.get_paginated_response(serializer.data)
+
+        serializer = ProfilePhotoViewRequestSerializer(requests, many=True, context={"request": request})
+        return Response(serializer.data)
+
     @action(detail=True, methods=['PATCH'], url_path='manage-profile')
     def delete_or_restore_profile(self, request, pk=None):
         profile = self.get_object()
+        user = profile.user
         action_type = request.query_params.get('action')
 
-        print("profile",profile)
-
         if action_type == 'delete':
-            if profile.deleted_by_cascade:
+            if user.is_active == False:
                 return Response({"error": "Profile is already deleted."}, status=status.HTTP_400_BAD_REQUEST)
-            profile.delete() 
+            # profile.delete()
+            
+            user.is_active = False
+            user.save()
             return Response({'message': "Profile deleted successfully!"}, status=status.HTTP_200_OK)
         
         elif action_type == 'restore':
-            if not profile.is_deleted: 
+            if not profile.deleted: 
                 return Response({"error": "Profile is not deleted and cannot be restored."}, status=status.HTTP_400_BAD_REQUEST)
-            profile.restore() 
+            profile.restore()
             return Response({'message': "Profile restored successfully!"}, status=status.HTTP_200_OK)        
         else:
             return Response({"error": "Invalid action parameter. Use 'delete' or 'restore'."}, status=status.HTTP_400_BAD_REQUEST)
-        
-    
+
 class ReligionViewSet(viewsets.ModelViewSet):
     queryset = Religion.objects.all()
     serializer_class = ReligionSerializer    
@@ -324,6 +367,27 @@ class PhotoViewSet(viewsets.ModelViewSet):
 class ProfileInterestViewSet(viewsets.ModelViewSet):
     queryset = ProfileInterest.objects.all()
     serializer_class = ProfileInterestSerializer  
+    permission_classes = [IsAuthenticated]
+    
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        status_update = request.data.get('status')
+        if status_update not in ['approved', 'declined']:
+            return Response(
+                {"error": "Invalid status. It must be either 'approved' or 'declined'."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        instance.status = status_update
+        instance.updated_at = datetime.now()
+        instance.save()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
+
+class ProfilePhotoViewRequestViewSet(viewsets.ModelViewSet):
+    queryset = ProfilePhotoViewRequest.objects.all()
+    serializer_class = ProfilePhotoViewRequestSerializer
     permission_classes = [IsAuthenticated]
     
     def partial_update(self, request, *args, **kwargs):

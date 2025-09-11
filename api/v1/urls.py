@@ -1,8 +1,9 @@
 from django.urls import include, path
 from rest_framework import routers
-from profiles.views import ProfileViewSet,ReligionViewSet,CommunityViewSet,EducationViewSet,OccupationViewSet,FamilyDetailsViewSet,AddressViewSet,PreferenceViewSet,PhotoViewSet,ProfileInterestViewSet
+from profiles.views import ProfilePhotoViewRequestViewSet, ProfileViewSet,ReligionViewSet,CommunityViewSet,EducationViewSet,OccupationViewSet,FamilyDetailsViewSet,AddressViewSet,PreferenceViewSet,PhotoViewSet,ProfileInterestViewSet
 from users.views import UserViewSet,UserRegistrationAPIView,UserLoginAPIView,SendMobileOtpAPIView,VerifyMobileOtpAPIView,UpdateLoginPasswordAPIView,SendForgotPasswordOTPAPIView,VerifyForgotPasswordOTPAPIView,ForgotPasswordAPIView
 from social_meadia.views import SocialMediaViewSet,SocialLinkAccessRequestViewSet
+from payments.views import CreateOrderView, PlanListView, VerifyPaymentView
 
 router = routers.DefaultRouter()
 
@@ -19,6 +20,7 @@ router.register(r'photos', PhotoViewSet,basename='photos')
 router.register(r'social-media', SocialMediaViewSet,basename='social_media')
 router.register(r'social-access-request', SocialLinkAccessRequestViewSet,basename='social_access_request')
 router.register(r'profile-interests', ProfileInterestViewSet,basename='profile_intrests')
+router.register(r'photo-view-requests', ProfilePhotoViewRequestViewSet, basename='photo_view_requests')
 
 
 
@@ -32,5 +34,8 @@ urlpatterns = [
     path('send-forgot-password-otp/', SendForgotPasswordOTPAPIView.as_view(), name='send-forgot-password'),
     path('verify-forgot-password-otp/', VerifyForgotPasswordOTPAPIView.as_view(), name='verify-forgot-password'),
     path('forgot-password/', ForgotPasswordAPIView.as_view(), name='forgot-password'),
+    path("payments/plans/", PlanListView.as_view(), name="plan-list"),
+    path("payments/create/", CreateOrderView.as_view(), name="payment-create"),
+    path("payments/verify/", VerifyPaymentView.as_view(), name="payment-verify"),
 
 ]

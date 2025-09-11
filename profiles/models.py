@@ -90,8 +90,8 @@ class Profile(BaseModel):
         ('other_disablity', 'Other Disablity'),
 
 
-    )    
-    
+    ) 
+        
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     profile_id = models.CharField(max_length=10, unique=True, blank=True,null=True)
     bio = models.TextField(blank=True)
@@ -107,6 +107,9 @@ class Profile(BaseModel):
     is_locked_photos = models.BooleanField(default=False)
     is_locked_social_accounts = models.BooleanField(default=False)
     is_hidden = models.BooleanField(default=False)
+    account_plan = models.ForeignKey("payments.Plan", on_delete=models.SET_NULL, null=True, blank=True)
+    plan_expiry_date = models.DateField(blank=True, null=True)
+
 
 
     def save(self, *args, **kwargs):
@@ -282,3 +285,27 @@ class ProfileInterest(BaseModel):
         verbose_name_plural = 'Profile Interests'
         unique_together = ('sender', 'receiver')
         ordering = ['-created_at']
+        
+        
+        
+class ProfilePhotoViewRequest(BaseModel):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('declined', 'Declined'),
+    ]
+
+    sender = models.ForeignKey(Profile, related_name='sent_photo_requests', on_delete=models.CASCADE)
+    receiver = models.ForeignKey(Profile, related_name='received_photo_requests', on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending') 
+
+
+    def __str__(self):
+        return f"Photo View Request: {self.user.username} requested to view photos of {self.receiver.user.username}"
+
+    class Meta:
+        verbose_name = 'Profile Photo View Request'
+        verbose_name_plural = 'Profile Photo View Requests'
+        unique_together = ('sender', 'receiver')
+        ordering = ['-created_at']
+        

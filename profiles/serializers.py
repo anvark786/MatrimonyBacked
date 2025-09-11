@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Profile,Address,Occupation,FamilyDetails,Education,Religion,Community,Preference,Photo,ProfileInterest
+from .models import Profile,Address,Occupation,FamilyDetails,Education, ProfilePhotoViewRequest,Religion,Community,Preference,Photo,ProfileInterest
 from users.serializers import UserSerializer
 from social_meadia.models import SocialMedia,SocialLinkAccessRequest
 from social_meadia.serializers import SocialMediaSerializer 
@@ -67,11 +67,17 @@ class ProfileSerializer(serializers.ModelSerializer):
         return serializer.data
     
     def get_address(self,obj):
-        request = self.context.get("request") 
+        request = self.context.get("request")
+        account_plan = getattr(request.user.profile, "account_plan", None)
+        if not account_plan or account_plan.code == "free":
+            return None
         address = Address.objects.filter(profile=obj).first()
         if address:
             serializer =  AddressSerializer(address,many=False,context={"request":request})
-            return serializer.data
+            user_mobile = obj.user.phone_number
+            user_email = obj.user.email            
+            return {**serializer.data, 'phone_number':user_mobile,'email':user_email}
+        return None
         
     def get_occupation(self,obj):
         request = self.context.get("request") 
@@ -120,7 +126,8 @@ class ProfileSerializer(serializers.ModelSerializer):
     def get_social_links(self,obj):
         social_links =  SocialMedia.objects.filter(owner=obj.user)
         request = self.context.get("request") 
-        if not request.user.is_authenticated:
+        account_plan = getattr(request.user.profile, "account_plan", None)
+        if not request.user.is_authenticated or not account_plan or account_plan.code == 'free':
             return []
         if obj.is_locked_social_accounts and not(
             SocialLinkAccessRequest.objects.filter(
@@ -191,6 +198,11 @@ class PhotoSerializer(serializers.ModelSerializer):
 
 
 class ProfileInterestSerializer(serializers.ModelSerializer):
+    sender = serializers.PrimaryKeyRelatedField(queryset=Profile.objects.all(), write_only=True)
+    receiver = serializers.PrimaryKeyRelatedField(queryset=Profile.objects.all(), write_only=True)
+    sender_data = serializers.SerializerMethodField(read_only=True)
+    receiver_data = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = ProfileInterest
         fields = '__all__'
@@ -204,5 +216,51 @@ class ProfileInterestSerializer(serializers.ModelSerializer):
         
         return data
     
+    def get_sender_data(self,obj):
+        return {
+            'id': obj.sender.id,
+            'profile_id': obj.sender.profile_id,
+            'name': obj.sender.user.first_name + " " + obj.sender.user.last_name
+        }
+    
+    def get_receiver_data(self,obj):
+        return {
+            'id': obj.receiver.id,
+            'profile_id': obj.receiver.profile_id,
+            'name': obj.receiver.user.first_name + " " + obj.receiver.user.last_name,
+        }
 
 
+class ProfilePhotoViewRequestSerializer(serializers.ModelSerializer):
+    
+    sender = serializers.PrimaryKeyRelatedField(queryset=Profile.objects.all(), write_only=True)
+    receiver = serializers.PrimaryKeyRelatedField(queryset=Profile.objects.all(), write_only=True)
+    class Meta:
+        model = ProfilePhotoViewRequest
+        fields = '__all__'
+
+    def validate(self, data):
+        sender = data.get('sender')
+        receiver = data.get('receiver')
+
+        if sender == receiver:
+            raise serializers.ValidationError("Sender and receiver cannot be the same user.")
+        
+        if ProfilePhotoViewRequest.objects.filter(sender=sender, receiver=receiver, status='pending').exists():
+            raise serializers.ValidationError("A pending request already exists between these users.")        
+        return data
+    
+    def get_sender_data(self,obj):
+        return {
+            'id': obj.sender.id,
+            'profile_id': obj.sender.profile_id,
+            'name': obj.sender.user.first_name + " " + obj.sender.user.last_name
+        }
+
+    def get_receiver_data(self,obj):
+        return {
+            'id': obj.receiver.id,
+            'profile_id': obj.receiver.profile_id,
+            'name': obj.receiver.user.first_name + " " + obj.receiver.user.last_name
+        }
+    
